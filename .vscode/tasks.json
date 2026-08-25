@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // {
+    //   "type": "typescript",
+    //   "tsconfig": "tsconfig.json",
+    //   "problemMatcher": ["$tsc"],
+    //   "group": {
+    //     "kind": "build",
+    //     "isDefault": true
+    //   },
+    //   "label": "tsc:build"
+    // },
+    {
+      "label": "dev:once",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:once"],
+      "isBackground": false,
+      "problemMatcher": [],
+      "options": {
+        "statusbar": {
+          "hide": false
+        }
+      }
+    },
+    {
+      "label": "type-check",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["type-check"],
+      "isBackground": false,
+      "problemMatcher": [],
+      "options": {
+        "statusbar": {
+          "hide": false
+        }
+      }
+    }
+  ]
+}

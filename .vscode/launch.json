@@ -1,0 +1,46 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "2.0.0",
+  "configurations": [
+    {
+      "name": "app",
+      "type": "node",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:once"],
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "stopOnEntry": false
+    },
+    {
+      "name": "app-args",
+      "type": "node",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:once", "--renew"],
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "stopOnEntry": false
+    },
+    {
+      "name": "File(tsx)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["tsx"],
+      "args": ["${relativeFile}"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

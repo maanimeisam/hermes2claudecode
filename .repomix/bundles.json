@@ -1,0 +1,14 @@
+{
+  "bundles": {
+    "my-repomix-538": {
+      "name": "my-repomix",
+      "created": "2026-06-08T07:00:43.668Z",
+      "lastUsed": "2026-06-08T07:22:37.813Z",
+      "tags": [],
+      "files": [
+        "tests"
+      ],
+      "configPath": ".repomix/config/repomix.config.json"
+    }
+  }
+}
