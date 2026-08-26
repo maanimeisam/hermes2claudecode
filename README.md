@@ -27,6 +27,21 @@ npm link   # exposes `useclaudeproxy` on your PATH
 
 After linking you can run `useclaudeproxy` from anywhere.
 
+## Run without installing (npx)
+
+You can also run it directly from npm without cloning — published as
+[`useclaudeproxy`](https://npmjs.com/package/useclaudeproxy):
+
+```bash
+npx useclaudeproxy --model stealth/ox-alpha
+```
+
+⚠️ **Use a fixed working directory.** Tokens and config persist in the
+current directory (default `data/` and `tools/config.yaml`). Each `npx`
+invocation starts from wherever you ran it, so to reuse your saved login next
+time, run it from the **same directory** every time. To keep data elsewhere,
+pass `--data-dir`.
+
 ## How it works
 
 ```
