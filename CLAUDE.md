@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-`temps` (package `hermes2claudecode`) is a TypeScript CLI that authenticates the **Hermes CLI** against Nous Research's OAuth 2.0 Device Authorization Grant (`https://portal.nousresearch.com/api/oauth`). It then downloads, configures, and runs the third-party `CLIProxyAPI` binary (`tools/cli-proxy-api`) — a local OpenAI/Gemini/Claude/Codex-compatible proxy — wired with the provider tokens it obtained.
+package `useclaudeproxy` is a TypeScript CLI that authenticates the **Hermes CLI** against Nous Research's OAuth 2.0 Device Authorization Grant (`https://portal.nousresearch.com/api/oauth`). It then downloads, configures, and runs the third-party `CLIProxyAPI` binary (`tools/cli-proxy-api`) — a local OpenAI/Gemini/Claude/Codex-compatible proxy — wired with the provider tokens it obtained.
 
 The two halves are distinct:
+
 - **The TS app** (`src/`) handles OAuth, config editing, and lifecycle of the binary.
 - **The binary** (`tools/cli-proxy-api`, ~600KB ELF, fetched from GitHub releases) is the actual proxy. It is not part of the TS build.
 
@@ -27,19 +28,20 @@ pnpm format     # biome format --write
 Biome 2.5.2 (config: `biome.json`) is the formatter + linter; a husky pre-commit hook runs `biome check` on staged files via lint-staged. There is **no test setup** in this repo (no test runner dependency; `tsconfig` references a `tests/` dir that does not exist).
 
 The app is invoked through three subcommands plus a no-command default:
-- `temps` (no command) → run the OAuth device flow, validate/refresh the stored token, print account info, optionally `--watch`.
-- `temps run [-- ...args]` → ensure the binary is present, then spawn it with `tools/config.yaml` (passes extra args through verbatim, e.g. `--tui`).
-- `temps set-token <claude|gemini|codex> <token>` → upsert a `<provider>-api-key` in `tools/config.yaml`.
-- `temps set-proxy <url|""|direct|none>` → set the binary's global `proxy-url`.
 
-Inline overrides work as position-independent global flags (e.g. `temps --node-env production --debug app:*`).
+- `useclaudeproxy` (no command) → run the OAuth device flow, validate/refresh the stored token, print account info, optionally `--watch`.
+- `useclaudeproxy run [-- ...args]` → ensure the binary is present, then spawn it with `tools/config.yaml` (passes extra args through verbatim, e.g. `--tui`).
+- `useclaudeproxy set-token <claude|gemini|codex> <token>` → upsert a `<provider>-api-key` in `tools/config.yaml`.
+- `useclaudeproxy set-proxy <url|""|direct|none>` → set the binary's global `proxy-url`.
+
+Inline overrides work as position-independent global flags (e.g. `useclaudeproxy --node-env production --debug app:*`).
 
 ## Architecture
 
 Entry point is `src/index.ts`; it routes on `args.command` and calls one of the paths below. Read these files in order to understand the flow:
 
-- **`src/args.ts`** — commander parser. Parses position-independent global flags (node-env, debug, data-dir, proxy-*) straight from raw argv (before handing the rest to commander), then exports the resolved `args` object plus `PROVIDERS = ["claude","gemini","codex"]`. Flags work in both `temps --force` and `temps run --force` because they're read from argv, not commander.
-- **`src/config.ts`** — zod-validated config sourced from the parsed CLI args. On import it validates against `envSchema` (with defaults) and **creates `DATA_DIR`**. The app's own config is NODE_ENV, DEBUG, DATA_DIR, PROXY_* — all supplied via flags, no `.env` files.
+- **`src/args.ts`** — commander parser. Parses position-independent global flags (node-env, debug, data-dir, proxy-\*) straight from raw argv (before handing the rest to commander), then exports the resolved `args` object plus `PROVIDERS = ["claude","gemini","codex"]`. Flags work in both `useclaudeproxy --force` and `useclaudeproxy run --force` because they're read from argv, not commander.
+- **`src/config.ts`** — zod-validated config sourced from the parsed CLI args. On import it validates against `envSchema` (with defaults) and **creates `DATA_DIR`**. The app's own config is NODE*ENV, DEBUG, DATA_DIR, PROXY*\* — all supplied via flags, no `.env` files.
 - **`src/types.ts`** — shared types and the three error classes used across the flow: `OAuthHttpError` (status + body), `DeviceCodeExpiredError`, `AccessDeniedError`.
 - **`src/http-client.ts`** — `createOAuthHttpClient()` builds a `got` instance for the OAuth provider. This module knows nothing about OAuth; it only configures retries/proxy and returns the client.
 - **`src/device-flow-client.ts`** — `DeviceFlowClient` class, one public method per flow step (`requestDeviceCode`, `pollForToken`, `refreshToken`, `fetchAccountInfo`) over the `got` client. `handlePollingError` distinguishes terminal errors (`expired_token` → `DeviceCodeExpiredError`, `access_denied` → `AccessDeniedError`) from transient ones (`authorization_pending`, `slow_down`) that just continue polling.
@@ -61,5 +63,5 @@ These are independent. Editing one does not affect the other.
 
 ## Config files you will touch
 
-- App config (NODE_ENV, DEBUG, DATA_DIR, PROXY_*) is now supplied via position-independent global flags — `--node-env`, `--debug`, `--data-dir`, `--proxy-enabled`, `--proxy-host`, `--proxy-port`. `DEBUG="app:*"` enables all `debug` namespaces. No `.env` files.
+- App config (NODE*ENV, DEBUG, DATA_DIR, PROXY*_) is now supplied via position-independent global flags — `--node-env`, `--debug`, `--data-dir`, `--proxy-enabled`, `--proxy-host`, `--proxy-port`. `DEBUG="app:_"`enables all`debug`namespaces. No`.env` files.
 - `tools/config.yaml` — the `CLIProxyAPI` config (api-keys, routes, proxy-url, management, plugins). Edited at runtime by `config-yaml.ts`; the example is `tools/config.example.yaml`. Full provider key blocks are commented out by default.
