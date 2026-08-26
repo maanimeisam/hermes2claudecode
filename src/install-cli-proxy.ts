@@ -101,8 +101,7 @@ export async function ensureCliProxy(): Promise<void> {
   }
 
   if (args.force) {
-    // ponytail: --force is explicit opt-in; alert only, no interactive prompt (breaks non-TTY)
-    console.error(
+    console.warn(
       `⚠️  --force set: re-downloading archive and overwriting extracted files in ${TOOLS_DIR}`,
     );
   }
@@ -118,11 +117,9 @@ export async function ensureCliProxy(): Promise<void> {
   }
   extract(archivePath, TOOLS_DIR);
   log("Installed CLIProxyAPI to %s", TOOLS_DIR);
-  seedConfig();
+  createConfig();
 }
 
-// ponytail: --renew reuses the kept archive. Deletes extracted files + symlinks,
-// keeps config.yaml + archive (re-download via --force if the archive is stale).
 function renewFromArchive(archivePath: string): void {
   if (!fs.existsSync(archivePath)) {
     console.error(
@@ -139,12 +136,12 @@ function renewFromArchive(archivePath: string): void {
   }
   extract(archivePath, TOOLS_DIR);
   log("Renewed CLIProxyAPI from %s", archivePath);
-  seedConfig();
+  createConfig();
   args.renew = false;
 }
 
 // ponytail: only seeds when live config absent — never clobbers an edited one
-function seedConfig(): void {
+function createConfig(): void {
   const example = path.join(TOOLS_DIR, "config.example.yaml");
   if (!fs.existsSync(example)) {
     console.error(`❌ Missing template: ${example}`);

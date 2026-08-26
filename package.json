@@ -1,15 +1,15 @@
 {
-  "name": "hermes2claudecode",
+  "name": "useclaudeproxy",
   "version": "1.0.0",
-  "author": "maanimis",
-  "description": "Hermes OAuth device-flow client for CLIProxyAPI — authenticates Claude/Gemini/Codex accounts and stores tokens locally.",
+  "author": "maanimeisam",
+  "description": "useclaudeproxy — OAuth device-flow CLI that authenticates the Hermes CLI and runs CLIProxyAPI as a local OpenAI/Claude/Gemini/Codex proxy.",
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "dev:once": "tsx src/index.ts",
     "web": "node web/server.js",
-    "prod": "",
+    "prod": "node ./dist/index.js",
     "build": "tsc",
     "prebuild": "rimraf dist",
     "type-check": "tsc --noEmit",
@@ -20,18 +20,20 @@
   },
   "license": "MIT",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
-    "temps": "dist/temps.bundled.mjs"
+    "useclaudeproxy": "dist/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/maanimis/temps.git"
+    "url": "https://github.com/maanimeisam/useclaudeproxy.git"
   },
-  "homepage": "https://github.com/maanimis/temps",
+  "homepage": "https://github.com/maanimeisam/useclaudeproxy",
   "bugs": {
-    "url": "https://github.com/maanimis/temps/issues"
+    "url": "https://github.com/maanimeisam/useclaudeproxy/issues"
   },
   "engines": {
     "node": ">=18"
@@ -66,5 +68,29 @@
     "yaml": "2.9.0",
     "zod": "^4.4.3"
   },
-  "keywords": []
+  "keywords": [
+    "claude",
+    "CLIProxyAPI",
+    "claudecode",
+    "useclaudeproxy"
+  ],
+  "allowScripts": {
+    "file:.pnpm/got@15.1.0/node_modules/got": true,
+    "file:.pnpm/globals@17.11.0/node_modules/globals": true,
+    "file:.pnpm/rimraf@6.1.3/node_modules/rimraf": true,
+    "file:../../../@sindresorhus+is@8.1.0/node_modules/@sindresorhus/is": true,
+    "file:../../tinyexec@1.3.0/node_modules/tinyexec": true,
+    "file:../../esbuild@0.28.2/node_modules/esbuild": true,
+    "file:../../glob@13.0.6/node_modules/glob": true,
+    "file:../../package-json-from-dist@1.0.1/node_modules/package-json-from-dist": true,
+    "file:../../content-type@2.1.0/node_modules/content-type": true,
+    "file:../../path-to-regexp@8.4.2/node_modules/path-to-regexp": true,
+    "file:../../ip-address@10.5.0/node_modules/ip-address": true,
+    "file:../../minimatch@10.2.6/node_modules/minimatch": true,
+    "file:../../minipass@7.1.3/node_modules/minipass": true,
+    "file:../../path-scurry@2.0.2/node_modules/path-scurry": true,
+    "file:../../brace-expansion@5.0.9/node_modules/brace-expansion": true,
+    "file:../../lru-cache@11.5.2/node_modules/lru-cache": true,
+    "file:../../balanced-match@4.0.4/node_modules/balanced-match": true
+  }
 }
