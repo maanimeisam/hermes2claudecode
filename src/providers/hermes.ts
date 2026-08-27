@@ -1,21 +1,25 @@
 import Debug from "debug";
 import fs from "node:fs";
-import path from "node:path";
 import open from "open";
 import { args } from "../args.ts";
 import { readConfig, writeConfig } from "../config-yaml.ts";
-import { config } from "../config.ts";
+import { TOKENS_PATH } from "../config.ts";
 import { createOAuthHttpClient } from "../http-client.ts";
-import { createConfig } from "../install-cli-proxy.ts";
-import { type AccountInfo, AccessDeniedError } from "../types.ts";
+import {
+  AccessDeniedError,
+  DeviceCodeExpiredError,
+  OAuthHttpError,
+  type AccountInfo,
+  type DeviceCodeResponse,
+  type TokenErrorResponse,
+  type TokenResponse,
+} from "../types.ts";
 import type { Provider } from "./types.ts";
 
 const log = Debug("useclaudeproxy:oauth");
 const errorLog = Debug("useclaudeproxy:oauth:error");
 
 const POLL_INTERVAL_MS = 7000;
-const WATCH_INTERVAL_MS = 7000;
-const TOKENS_PATH = path.join(config.DATA_DIR, "hermes-tokens.json");
 const FORM_HEADERS = {
   "Content-Type": "application/x-www-form-urlencoded",
   Accept: "application/json",
@@ -29,50 +33,7 @@ const OAUTH = {
   refreshTokenHeader: "X-Nous-Refresh-Token",
 };
 
-type DeviceCodeResponse = {
-  device_code: string;
-  user_code: string;
-  verification_uri: string;
-  verification_uri_complete?: string;
-  expires_in: number;
-  interval: number;
-};
-
-type TokenResponse = {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
-  expires_in?: number;
-};
-
-type TokenErrorResponse = {
-  error:
-    | "authorization_pending"
-    | "slow_down"
-    | "expired_token"
-    | "access_denied"
-    | string;
-  error_description?: string;
-};
-
-class OAuthHttpError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number,
-    public readonly body: unknown,
-  ) {
-    super(message);
-    this.name = "OAuthHttpError";
-  }
-}
-
-class DeviceCodeExpiredError extends Error {
-  constructor() {
-    super("Device code expired before authorization completed");
-    this.name = "DeviceCodeExpiredError";
-  }
-}
-
+// Device flow client — Hermes-specific (endpoints, headers, error mapping).
 class HermesDeviceFlowClient {
   constructor(private readonly http = createOAuthHttpClient()) {}
 
@@ -175,24 +136,12 @@ function parseBody<T>(response: { body: unknown }): T {
     : (response.body as T);
 }
 
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal?.aborted) return resolve();
-    const t = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t);
-        resolve();
-      },
-      { once: true },
-    );
-  });
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export class HermesProvider implements Provider {
   readonly name = "hermes";
-  readonly tokenPath = TOKENS_PATH;
   private readonly client = new HermesDeviceFlowClient();
 
   async getValidToken(): Promise<TokenResponse> {
@@ -221,32 +170,7 @@ export class HermesProvider implements Provider {
     return this.runDeviceFlow();
   }
 
-  async startTokenWatcher(signal?: AbortSignal): Promise<void> {
-    log("Watching token every %dms", WATCH_INTERVAL_MS);
-    let current = (await this.getValidToken()).access_token;
-    let printed = false;
-    while (!signal?.aborted) {
-      try {
-        const account = await this.getAccountInfo(current);
-        if (!printed) {
-          printed = true;
-          log("Account Information:\n" + JSON.stringify(account, null, 2));
-        }
-        log("Token valid");
-      } catch (err) {
-        errorLog("Token invalid, renewing: %o", err);
-        const refreshed = await this.getValidToken();
-        current = refreshed.access_token;
-        printed = false;
-        log(`Token RENEWED (expires_in=${refreshed.expires_in})`);
-      }
-      await sleep(WATCH_INTERVAL_MS, signal);
-    }
-  }
-
-  private async getAccountInfo(
-    accessToken: string,
-  ): Promise<Record<string, unknown>> {
+  async getAccountInfo(accessToken: string): Promise<Record<string, unknown>> {
     return this.client.fetchAccountInfo(accessToken);
   }
 
@@ -265,17 +189,9 @@ export class HermesProvider implements Provider {
 
     const token = await this.client.pollForToken(deviceCode.device_code);
     log("Authorization successful");
-    createConfig();
     this.initConfig(args.model);
     this.saveTokens(token);
     return token;
-  }
-
-  clearStoredToken(): void {
-    if (fs.existsSync(TOKENS_PATH)) {
-      fs.rmSync(TOKENS_PATH, { force: true });
-      log("Cleared stored token");
-    }
   }
 
   private readStoredToken(): TokenResponse | undefined {
