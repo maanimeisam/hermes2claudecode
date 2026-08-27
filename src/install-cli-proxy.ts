@@ -7,7 +7,7 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { args } from "./args.ts";
 import { CONFIG_PATH } from "./config-yaml.ts";
-import { TOKENS_PATH } from "./config.ts";
+import { type Provider, getProvider } from "./providers/index.ts";
 
 const log = Debug("app:install");
 
@@ -80,11 +80,11 @@ export async function ensureCliProxy(): Promise<void> {
   const asset = pickAsset();
   const url = `${RELEASE_BASE}/${asset}`;
   const archivePath = path.join(TOOLS_DIR, asset);
+  const provider: Provider = getProvider(args.activeProvider);
 
-  // --renew: re-extract from the kept archive, then app.ts re-runs the device flow.
   if (args.renew) {
-    if (fs.existsSync(TOKENS_PATH)) {
-      fs.rmSync(TOKENS_PATH, { force: true });
+    if (fs.existsSync(provider.tokenPath)) {
+      fs.rmSync(provider.tokenPath, { force: true });
       log("--renew: cleared stored token, will re-run device flow");
     }
     renewFromArchive(archivePath);
