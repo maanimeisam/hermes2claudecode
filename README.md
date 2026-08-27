@@ -42,24 +42,14 @@ invocation starts from wherever you ran it, so to reuse your saved login next
 time, run it from the **same directory** every time. To keep data elsewhere,
 pass `--data-dir`.
 
-## How it works
 
-```
-useclaudeproxy --model <model>
-   │
-   ├─ 1. ensureCliProxy()      download CLIProxyAPI (pinned v7.2.142) from GitHub → tools/
-   ├─ 2. getValidToken()       use stored token ──refresh──▶ run device flow
-   │        │                     (portal.nousresearch.com)
-   │        ▼
-   ├─ 3. getAccountInfo()      verify the token, print account info
-   ├─ 4. setProxyUrl()         apply --proxy to tools/config.yaml
-   └─ 5. runCliProxy()         spawn cli-proxy-api -config tools/config.yaml
-            + watch loop       transparently refresh the token while it runs
-```
 
-Tokens are persisted at `data/tokens.json` (mode `0o600`). On every refresh the
-provider token is re-injected into `tools/config.yaml` so the proxy keeps
-working without manual re-entry.
+Tokens are persisted inside the provider's own file — Hermes uses
+`data/hermes-tokens.json` (mode `0o600`). The token path is **provider-specific**,
+not a shared global: a future provider can use a completely different location or
+format without affecting others. On every refresh the provider token is
+re-injected into `tools/config.yaml` so the proxy keeps working without manual
+re-entry.
 
 ## Requirements
 

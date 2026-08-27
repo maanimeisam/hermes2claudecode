@@ -12,7 +12,6 @@ const BINARY = path.join(import.meta.dirname, "..", "tools", "cli-proxy-api");
 // through verbatim (e.g. --tui, --standalone). Inherits stdio and forwards
 // signals so the user drives it directly (Ctrl+C shuts the server down).
 export async function runCliProxy(proxyArgs: string[] = []): Promise<number> {
-  await ensureCliProxy();
   const argv = [BINARY, "-config", CONFIG_PATH, ...proxyArgs];
   log("Spawning: %s", argv.join(" "));
   const child = cp.spawn(argv[0], argv.slice(1), { stdio: "inherit" });
