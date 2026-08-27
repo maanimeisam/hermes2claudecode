@@ -1,0 +1,23 @@
+name: Restore NPM Latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "NPM version to set as latest"
+        required: true
+        default: "1.0.1"
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      - run: npm dist-tag add useclaudeproxy@${{ inputs.version }} latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
