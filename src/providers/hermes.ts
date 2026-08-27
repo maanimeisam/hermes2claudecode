@@ -6,6 +6,7 @@ import { args } from "../args.ts";
 import { readConfig, writeConfig } from "../config-yaml.ts";
 import { config } from "../config.ts";
 import { createOAuthHttpClient } from "../http-client.ts";
+import { createConfig } from "../install-cli-proxy.ts";
 import { type AccountInfo, AccessDeniedError } from "../types.ts";
 import type { Provider } from "./types.ts";
 
@@ -264,6 +265,7 @@ export class HermesProvider implements Provider {
 
     const token = await this.client.pollForToken(deviceCode.device_code);
     log("Authorization successful");
+    createConfig();
     this.initConfig(args.model);
     this.saveTokens(token);
     return token;

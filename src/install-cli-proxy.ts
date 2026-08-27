@@ -140,8 +140,7 @@ function renewFromArchive(archivePath: string): void {
   args.renew = false;
 }
 
-// ponytail: only seeds when live config absent — never clobbers an edited one
-function createConfig(): void {
+export function createConfig(): void {
   const example = path.join(TOOLS_DIR, "config.example.yaml");
   if (!fs.existsSync(example)) {
     console.error(`❌ Missing template: ${example}`);
