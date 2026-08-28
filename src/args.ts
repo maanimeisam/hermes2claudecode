@@ -16,6 +16,7 @@ interface CliArgs {
   api: string;
   host: string;
   cliKey: string;
+  port: number;
 }
 
 const program = new Command();
@@ -49,6 +50,7 @@ program
     "api key to register in config api-keys (default: 456789)",
     "456789",
   )
+  .option("--port <port>", "port to bind in config (default: 2096)", "2096")
   .option("--force", "re-download CLIProxyAPI even if already installed")
   .option("--renew", "re-extract from the kept archive and re-run device flow")
   .parse();
@@ -94,6 +96,7 @@ const cli: CliArgs = {
   api: "",
   host: "127.0.0.1",
   cliKey: "456789",
+  port: 2096,
 };
 
 const opts = program.opts() as {
@@ -109,6 +112,7 @@ const opts = program.opts() as {
   api: string;
   host: string;
   cliKey: string;
+  port: number;
 };
 
 process.env.DEBUG ??= "useclaudeproxy:*";
@@ -122,5 +126,6 @@ cli.url = opts.url ?? "";
 cli.api = opts.api ?? "";
 cli.host = opts.host;
 cli.cliKey = opts.cliKey;
+cli.port = Number(opts.port);
 
 export const args = cli;

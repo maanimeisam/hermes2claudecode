@@ -98,7 +98,7 @@ On success the CLI prints the env vars to point Claude Code at the local proxy:
 
 ```bash
 export ANTHROPIC_MODEL=claude-opus-5
-export ANTHROPIC_BASE_URL=http://127.0.0.1:8317
+export ANTHROPIC_BASE_URL=http://127.0.0.1:2096
 export ANTHROPIC_AUTH_TOKEN=456789
 ```
 

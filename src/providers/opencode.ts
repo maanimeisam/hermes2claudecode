@@ -56,6 +56,7 @@ export class OpenCodeProvider extends BaseProvider {
     const config = readConfig();
 
     config["host"] = args.host;
+    config["port"] = args.port;
     config["api-keys"] = [args.cliKey];
     config["openai-compatibility"] = [{ name: this.name }];
 
