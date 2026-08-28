@@ -1,21 +1,24 @@
 import Debug from "debug";
 import { args } from "./args.ts";
-import { setProxyUrl } from "./config-yaml.ts";
 import { ensureCliProxy } from "./install-cli-proxy.ts";
-import { getProvider, type Provider } from "./providers/index.ts";
+import type { BaseProvider } from "./providers/base-provider.ts";
+import { getProvider } from "./providers/index.ts";
 import { runCliProxy } from "./run-cli-proxy.ts";
 
 const log = Debug("useclaudeproxy:oauth");
 const errorLog = Debug("useclaudeproxy:oauth:error");
 
 export async function app(): Promise<void> {
+  const provider: BaseProvider = getProvider(args.activeProvider);
+
   await ensureCliProxy();
 
-  const provider: Provider = getProvider(args.activeProvider);
+  if (args.renew) process.exit(0);
 
-  await provider.getValidToken();
+  provider.initConfig();
 
-  setProxyUrl(args.proxy);
+  provider.logConfigInfo();
+
   runCliProxy()
     .then((code) => process.exit(code))
     .catch((err) => {

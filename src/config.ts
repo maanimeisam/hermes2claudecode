@@ -2,8 +2,6 @@ import fs from "node:fs";
 import { z } from "zod";
 import { args } from "./args.ts";
 
-// All config is supplied via CLI flags (see args.ts). Validated with zod and
-// frozen. Importing this module also creates DATA_DIR.
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production"]).default("development"),
   DATA_DIR: z.string().default("data"),
@@ -13,9 +11,9 @@ const envSchema = z.object({
 });
 
 const parsedEnv = envSchema.safeParse({
-  NODE_ENV: args.nodeEnv,
+  NODE_ENV: process.env.NODE_ENV,
   DATA_DIR: args.dataDir,
-  DEBUG: args.debug,
+  DEBUG: process.env.DEBUG,
 });
 if (!parsedEnv.success) {
   console.error("❌ Invalid arguments:");

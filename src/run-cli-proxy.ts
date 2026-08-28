@@ -1,8 +1,8 @@
 import Debug from "debug";
 import cp from "node:child_process";
 import path from "node:path";
-import { CONFIG_PATH } from "./config-yaml.ts";
-import { ensureCliProxy } from "./install-cli-proxy.ts";
+import { args } from "./args.ts";
+import { CONFIG_PATH, setProxyUrl } from "./config-yaml.ts";
 
 const log = Debug("app:run");
 
@@ -12,6 +12,8 @@ const BINARY = path.join(import.meta.dirname, "..", "tools", "cli-proxy-api");
 // through verbatim (e.g. --tui, --standalone). Inherits stdio and forwards
 // signals so the user drives it directly (Ctrl+C shuts the server down).
 export async function runCliProxy(proxyArgs: string[] = []): Promise<number> {
+  setProxyUrl(args.proxy);
+
   const argv = [BINARY, "-config", CONFIG_PATH, ...proxyArgs];
   log("Spawning: %s", argv.join(" "));
   const child = cp.spawn(argv[0], argv.slice(1), { stdio: "inherit" });

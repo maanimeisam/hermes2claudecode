@@ -7,11 +7,12 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { args } from "./args.ts";
 import { CONFIG_PATH } from "./config-yaml.ts";
-import { type Provider, getProvider } from "./providers/index.ts";
+import type { BaseProvider } from "./providers/base-provider.ts";
+import { getProvider } from "./providers/index.ts";
 
 const log = Debug("app:install");
 
-const VERSION = "7.2.142";
+const VERSION = "7.2.144";
 const RELEASE_BASE = `https://github.com/router-for-me/CLIProxyAPI/releases/download/v${VERSION}`;
 const TOOLS_DIR = path.join(import.meta.dirname, "..", "tools");
 
@@ -80,7 +81,7 @@ export async function ensureCliProxy(): Promise<void> {
   const asset = pickAsset();
   const url = `${RELEASE_BASE}/${asset}`;
   const archivePath = path.join(TOOLS_DIR, asset);
-  const provider: Provider = getProvider(args.activeProvider);
+  const provider: BaseProvider = getProvider(args.activeProvider);
 
   if (args.renew) {
     provider.clearStoredToken();
@@ -126,6 +127,7 @@ function renewFromArchive(archivePath: string): void {
     );
     process.exit(1);
   }
+
   const keep = new Set([path.basename(archivePath)]);
   for (const name of fs.readdirSync(TOOLS_DIR)) {
     if (keep.has(name)) continue;
@@ -134,7 +136,6 @@ function renewFromArchive(archivePath: string): void {
   extract(archivePath, TOOLS_DIR);
   log("Renewed CLIProxyAPI from %s", archivePath);
   createConfig();
-  args.renew = false;
 }
 
 export function createConfig(): void {

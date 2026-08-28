@@ -5,25 +5,53 @@
   "version": "2.0.0",
   "configurations": [
     {
-      "name": "app",
-      "type": "node",
-      "request": "launch",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev:once"],
-      "restart": true,
-      "skipFiles": ["<node_internals>/**"],
-      "stopOnEntry": false
-    },
-    {
-      "name": "app-args",
+      "name": "app-renew",
       "type": "node",
       "request": "launch",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev:once", "--renew"],
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "stopOnEntry": false
+    },
+    {
+      "name": "app-hermes",
+      "type": "node",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:once",
+        "--proxy",
+        "http://127.0.0.1:2080",
+        "--provider",
+        "hermes",
+        "--model",
+        "tencent/hy3:free"
+      ],
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "stopOnEntry": false
+    },
+    {
+      "name": "app-oc",
+      "type": "node",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:once",
+        "--proxy",
+        "http://127.0.0.1:8585",
+        "--provider",
+        "opencode",
+        "--model",
+        "hy3-free"
+      ],
       "restart": true,
       "skipFiles": ["<node_internals>/**"],
       "stopOnEntry": false

@@ -1,5 +1,4 @@
 import Debug from "debug";
-import fs from "node:fs";
 import path from "node:path";
 import open from "open";
 import { args } from "../args.ts";
@@ -7,24 +6,17 @@ import { readConfig, writeConfig } from "../config-yaml.ts";
 import { config } from "../config.ts";
 import { createOAuthHttpClient } from "../http-client.ts";
 import { type AccountInfo, AccessDeniedError } from "../types.ts";
-import type { Provider } from "./types.ts";
+import { sleep } from "../utils.ts";
+import { BaseProvider } from "./base-provider.ts";
 
-const log = Debug("useclaudeproxy:oauth");
-const errorLog = Debug("useclaudeproxy:oauth:error");
+const log = Debug("useclaudeproxy:hermes");
+const errorLog = Debug("useclaudeproxy:hermes:error");
 
 const POLL_INTERVAL_MS = 7000;
 const WATCH_INTERVAL_MS = 7000;
 const FORM_HEADERS = {
   "Content-Type": "application/x-www-form-urlencoded",
   Accept: "application/json",
-};
-
-const OAUTH = {
-  baseUrl: "https://portal.nousresearch.com/api/oauth",
-  clientId: "hermes-cli",
-  scope: "inference:invoke",
-  grantType: "urn:ietf:params:oauth:grant-type:device_code",
-  refreshTokenHeader: "X-Nous-Refresh-Token",
 };
 
 type DeviceCodeResponse = {
@@ -72,13 +64,20 @@ class DeviceCodeExpiredError extends Error {
 }
 
 class HermesDeviceFlowClient {
+  OAUTH = {
+    baseUrl: "https://portal.nousresearch.com/api/oauth",
+    clientId: "hermes-cli",
+    scope: "inference:invoke",
+    grantType: "urn:ietf:params:oauth:grant-type:device_code",
+    refreshTokenHeader: "X-Nous-Refresh-Token",
+  };
   constructor(private readonly http = createOAuthHttpClient()) {}
 
   async requestDeviceCode(): Promise<DeviceCodeResponse> {
     log("Requesting device code");
-    const response = await this.http.post(`${OAUTH.baseUrl}/device/code`, {
+    const response = await this.http.post(`${this.OAUTH.baseUrl}/device/code`, {
       headers: FORM_HEADERS,
-      body: `client_id=${OAUTH.clientId}&scope=${encodeURIComponent(OAUTH.scope)}`,
+      body: `client_id=${this.OAUTH.clientId}&scope=${encodeURIComponent(this.OAUTH.scope)}`,
     });
     return this.parseOrThrow<DeviceCodeResponse>(
       response,
@@ -90,9 +89,9 @@ class HermesDeviceFlowClient {
     log("Polling for token");
     while (true) {
       await sleep(POLL_INTERVAL_MS);
-      const response = await this.http.post(`${OAUTH.baseUrl}/token`, {
+      const response = await this.http.post(`${this.OAUTH.baseUrl}/token`, {
         headers: FORM_HEADERS,
-        body: `grant_type=${OAUTH.grantType}&client_id=${OAUTH.clientId}&device_code=${deviceCode}`,
+        body: `grant_type=${this.OAUTH.grantType}&client_id=${this.OAUTH.clientId}&device_code=${deviceCode}`,
       });
       if (response.statusCode === 200)
         return parseBody<TokenResponse>(response);
@@ -110,9 +109,12 @@ class HermesDeviceFlowClient {
 
   async refreshToken(refreshToken: string): Promise<TokenResponse> {
     log("Refreshing access token");
-    const response = await this.http.post(`${OAUTH.baseUrl}/token`, {
-      headers: { ...FORM_HEADERS, [OAUTH.refreshTokenHeader]: refreshToken },
-      body: `grant_type=refresh_token&client_id=${OAUTH.clientId}`,
+    const response = await this.http.post(`${this.OAUTH.baseUrl}/token`, {
+      headers: {
+        ...FORM_HEADERS,
+        [this.OAUTH.refreshTokenHeader]: refreshToken,
+      },
+      body: `grant_type=refresh_token&client_id=${this.OAUTH.clientId}`,
     });
     return this.parseOrThrow<TokenResponse>(
       response,
@@ -122,7 +124,7 @@ class HermesDeviceFlowClient {
 
   async fetchAccountInfo(accessToken: string): Promise<AccountInfo> {
     log("Fetching account information");
-    const response = await this.http.get(`${OAUTH.baseUrl}/account`, {
+    const response = await this.http.get(`${this.OAUTH.baseUrl}/account`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
@@ -173,28 +175,49 @@ function parseBody<T>(response: { body: unknown }): T {
     : (response.body as T);
 }
 
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal?.aborted) return resolve();
-    const t = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t);
-        resolve();
-      },
-      { once: true },
-    );
-  });
-}
-
-export class HermesProvider implements Provider {
+export class HermesProvider extends BaseProvider {
   readonly name = "hermes";
+  readonly baseUrl = "https://inference-api.nousresearch.com/v1";
   readonly tokenPath = path.join(config.DATA_DIR, "hermes-tokens.json");
   private readonly client = new HermesDeviceFlowClient();
 
+  async initConfig(): Promise<void> {
+    const config = readConfig();
+
+    config["host"] = "127.0.0.1";
+    config["api-keys"] = ["456789"];
+    config["openai-compatibility"] = [{ name: this.name }];
+
+    const api = config["openai-compatibility"][0];
+    api["base-url"] = this.baseUrl;
+    api["models"] = [
+      { name: args.model, alias: "claude-opus-5" },
+      { name: args.model, alias: "" },
+    ];
+
+    api["headers"] = {
+      "User-Agent": "OpenAI/Python 2.24.0",
+      "X-Stainless-Arch": "x64",
+      "X-Stainless-Async": "false",
+      "X-Stainless-Lang": "python",
+      "X-Stainless-Os": "Linux",
+      "X-Stainless-Package-Version": "2.24.0",
+      "X-Stainless-Read-Timeout": "30.0",
+      "X-Stainless-Retry-Count": "0",
+      "X-Stainless-Runtime": "CPython",
+      "X-Stainless-Runtime-Version": "3.11.15",
+    };
+
+    api["disable-cooling"] = true;
+
+    const token = await this.getValidToken();
+    this.setApiKey(token.access_token);
+
+    writeConfig(config);
+  }
+
   async getValidToken(): Promise<TokenResponse> {
-    const stored = this.readStoredToken();
+    const stored = this.readStoredToken<TokenResponse>();
     if (stored) {
       try {
         await this.client.fetchAccountInfo(stored.access_token);
@@ -224,8 +247,8 @@ export class HermesProvider implements Provider {
     let current = (await this.getValidToken()).access_token;
     while (!signal?.aborted) {
       try {
-        const account = await this.getAccountInfo(current);
-        // log("Account Information:\n" + JSON.stringify(account, null, 2));
+        const account = await this.client.fetchAccountInfo(current);
+        // log("Account Information:", account);
         log("Token valid");
       } catch (err) {
         errorLog("Token invalid, renewing: %o", err);
@@ -235,12 +258,6 @@ export class HermesProvider implements Provider {
       }
       await sleep(WATCH_INTERVAL_MS, signal);
     }
-  }
-
-  private async getAccountInfo(
-    accessToken: string,
-  ): Promise<Record<string, unknown>> {
-    return this.client.fetchAccountInfo(accessToken);
   }
 
   private async runDeviceFlow(): Promise<TokenResponse> {
@@ -260,93 +277,13 @@ export class HermesProvider implements Provider {
 
     const token = await this.client.pollForToken(deviceCode.device_code);
     log("Authorization successful");
-    this.initConfig(args.model);
     this.saveTokens(token);
     return token;
   }
 
-  clearStoredToken(): void {
-    if (fs.existsSync(this.tokenPath)) {
-      fs.rmSync(this.tokenPath, { force: true });
-      log("Cleared stored token");
-    }
-  }
-
-  private readStoredToken(): TokenResponse | undefined {
-    if (!fs.existsSync(this.tokenPath)) return undefined;
-    try {
-      return JSON.parse(
-        fs.readFileSync(this.tokenPath, "utf8"),
-      ) as TokenResponse;
-    } catch {
-      return undefined;
-    }
-  }
-
-  private saveTokens(token: TokenResponse): void {
-    fs.writeFileSync(this.tokenPath, JSON.stringify(token, null, 2), {
-      mode: 0o600,
-    });
+  override saveTokens(token: TokenResponse): void {
+    super.saveTokens(token);
     this.setApiKey(token.access_token);
-  }
-
-  private initConfig(model: string): void {
-    const config = readConfig();
-
-    config["host"] = "127.0.0.1";
-    config["api-keys"] = ["456789"];
-    config["openai-compatibility"] = [{ name: args.activeProvider }];
-
-    const api = config["openai-compatibility"][0];
-    api["base-url"] = "https://inference-api.nousresearch.com/v1";
-    api["models"] = [
-      { name: model, alias: "claude-opus-5" },
-      { name: model, alias: "" },
-    ];
-
-    api["headers"] = {
-      "User-Agent": "OpenAI/Python 2.24.0",
-      "X-Stainless-Arch": "x64",
-      "X-Stainless-Async": "false",
-      "X-Stainless-Lang": "python",
-      "X-Stainless-Os": "Linux",
-      "X-Stainless-Package-Version": "2.24.0",
-      "X-Stainless-Read-Timeout": "30.0",
-      "X-Stainless-Retry-Count": "0",
-      "X-Stainless-Runtime": "CPython",
-      "X-Stainless-Runtime-Version": "3.11.15",
-    };
-
-    api["disable-cooling"] = true;
-
-    const text = `
-#API-KEY: ${config["api-keys"]}
-OpenAI-compatible: http://127.0.0.1:${config["port"]}/v1
-Anthropic-compatible: http://127.0.0.1:${config["port"]}
-Gemini-compatible: http://127.0.0.1:${config["port"]}
-
-Model >>> Alias:
-    ${model} >>> claude-opus-5
-    ${model} >>>
-
-[ClaudeCode]
-export ANTHROPIC_MODEL=claude-opus-5
-export ANTHROPIC_BASE_URL=http://127.0.0.1:${config["port"]}
-export ANTHROPIC_AUTH_TOKEN=${config["api-keys"]}
-`;
-
-    console.log(text);
-    writeConfig(config);
-  }
-
-  private setApiKey(apiKey: string): void {
-    const config = readConfig();
-    const api = config["openai-compatibility"][0];
-
-    api["api-key-entries"] = [{ "api-key": apiKey }];
-    api["headers"]["Authorization"] = `Bearer ${apiKey}`;
-
-    writeConfig(config);
   }
 }
 

@@ -4,8 +4,6 @@ export const PROVIDERS = ["claude", "gemini", "codex"];
 
 interface CliArgs {
   force: boolean;
-  nodeEnv: string;
-  debug: string;
   dataDir: string;
   proxy: string;
   renew: boolean;
@@ -21,17 +19,8 @@ const program = new Command();
 program
   .name("useclaudeproxy")
   .description("Hermes OAuth Device Flow")
-  .option("--node-env <env>", "development | production", "development")
-  .option(
-    "--debug <ns>",
-    'debug namespaces, e.g. "useclaudeproxy:*"',
-    "useclaudeproxy:*",
-  )
   .option("--data-dir <dir>", "token storage directory", "data")
-  .requiredOption(
-    "--model <model>",
-    "model name to expose in openai-compatibility",
-  )
+  .option("--model <model>", "model name to expose in openai-compatibility")
   .option(
     "--proxy <url>",
     'CLIProxyAPI outbound proxy (omit for "", or ""|direct|none to clear)',
@@ -45,10 +34,27 @@ program
   .option("--renew", "re-extract from the kept archive and re-run device flow")
   .parse();
 
+if (
+  !program.opts<{ renew: boolean; model?: string }>().renew &&
+  !program.opts().model
+) {
+  program.error("required option '--model <model>' not specified");
+}
+
+program.addHelpText(
+  "after",
+  `
+Environment variables:
+  NODE_ENV   development | production
+             Example: export NODE_ENV=production
+
+  DEBUG      debug namespaces, e.g. "useclaudeproxy:*"
+             Example: export DEBUG="useclaudeproxy:*"
+`,
+);
+
 const cli: CliArgs = {
   force: false,
-  nodeEnv: "development",
-  debug: "useclaudeproxy:*",
   dataDir: "data",
   proxy: "",
   renew: false,
@@ -57,8 +63,6 @@ const cli: CliArgs = {
 };
 
 const opts = program.opts() as {
-  nodeEnv: string;
-  debug: string;
   dataDir: string;
   proxy: string;
   force: boolean;
@@ -69,9 +73,7 @@ const opts = program.opts() as {
   activeProvider: string;
 };
 
-process.env.DEBUG = opts.debug;
-cli.nodeEnv = opts.nodeEnv;
-cli.debug = opts.debug;
+process.env.DEBUG ??= "useclaudeproxy:*";
 cli.dataDir = opts.dataDir;
 cli.proxy = opts.proxy ?? "";
 cli.model = opts.model;
