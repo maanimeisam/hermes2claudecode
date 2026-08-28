@@ -114,6 +114,9 @@ These work in **any position** — before or after the command.
 | `--api <key>`       | `""`         | API key for the custom API (required when `custom`).          |
 | `--data-dir <dir>`  | `data`       | Token storage directory.                                      |
 | `--proxy <url>`     | `""`         | CLIProxyAPI outbound proxy (`""`\|`direct`\|`none` to clear). |
+| `--host <host>`     | `127.0.0.1`  | Host to bind in `tools/config.yaml`.                          |
+| `--cli-key <key>`   | `456789`     | API key to register in config `api-keys`.                     |
+| `--port <port>`     | `2096`       | Port to bind in `tools/config.yaml`.                          |
 | `--force`           | `false`      | Re-download the binary even if already installed.             |
 | `--renew`           | `false`      | Re-extract from the kept archive and re-run the device flow.  |
 
