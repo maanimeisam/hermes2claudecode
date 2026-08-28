@@ -80,10 +80,20 @@ differ only in how they authenticate upstream.
   browser login, then auto-refreshes the token.
 - **`opencode`** — authenticates against `https://opencode.ai/zen/v1` with a key
   (no device flow). Tokens persist in `data/opencode-tokens.json`.
+- **`custom`** — point the proxy at any OpenAI-compatible API. No login: supply
+  `--url`, `--api`, and `--model`; the given key is sent as a `Bearer` header
+  upstream. Token persists in `data/custom-tokens.json`.
 
 ```bash
 # Use the opencode provider, routing its upstream traffic through a proxy:
 useclaudeproxy --proxy http://127.0.0.1:2080 --provider opencode --model hy3-free
+
+# Point the proxy at any OpenAI-compatible API — no device flow.
+# --url, --api and --model are all required for the custom provider.
+useclaudeproxy --provider custom \
+  --url http://1.1.1.1:20128/v1 \
+  --api sk-123123123 \
+  --model XX
 ```
 
 On success the CLI prints the env vars to point Claude Code at the local proxy:
@@ -101,7 +111,9 @@ These work in **any position** — before or after the command.
 | Flag                | Default            | Notes                                                         |
 | ------------------- | ------------------ | ------------------------------------------------------------- |
 | `--model <model>`   | _(required)_       | Model name to expose in OpenAI compatibility.                 |
-| `--provider <name>` | `hermes`           | OAuth provider to use (`hermes` \| `opencode`).               |
+| `--provider <name>` | `hermes`           | OAuth provider to use (`hermes` \| `opencode` \| `custom`).  |
+| `--url <url>`       | `""`               | OpenAI-compatible API base URL (required when `custom`).      |
+| `--api <key>`       | `""`               | API key for the custom API (required when `custom`).          |
 | `--node-env <env>`  | `development`      | `development` \| `production`.                                |
 | `--debug <ns>`      | `useclaudeproxy:*` | `debug` namespaces, e.g. `useclaudeproxy:oauth`.              |
 | `--data-dir <dir>`  | `data`             | Token storage directory.                                      |
