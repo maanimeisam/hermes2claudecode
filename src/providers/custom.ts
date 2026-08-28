@@ -25,8 +25,8 @@ export class CustomProvider extends BaseProvider {
   async initConfig(): Promise<void> {
     const config = readConfig();
 
-    config["host"] = "127.0.0.1";
-    config["api-keys"] = ["456789"];
+    config["host"] = args.host;
+    config["api-keys"] = [args.cliKey];
     config["openai-compatibility"] = [{ name: this.name }];
 
     const api = config["openai-compatibility"][0];
@@ -75,6 +75,7 @@ export class CustomProvider extends BaseProvider {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token.key}`,
+            "User-Agent": "curl/8.5.0",
           },
           json: {
             model: args.model,

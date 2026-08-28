@@ -14,6 +14,8 @@ interface CliArgs {
   model: string;
   url: string;
   api: string;
+  host: string;
+  cliKey: string;
 }
 
 const program = new Command();
@@ -36,6 +38,16 @@ program
   .option(
     "--api <key>",
     "API key for the OpenAI-compatible API (provider: custom)",
+  )
+  .option(
+    "--host <host>",
+    "host to bind in config (default: 127.0.0.1)",
+    "127.0.0.1",
+  )
+  .option(
+    "--cli-key <key>",
+    "api key to register in config api-keys (default: 456789)",
+    "456789",
   )
   .option("--force", "re-download CLIProxyAPI even if already installed")
   .option("--renew", "re-extract from the kept archive and re-run device flow")
@@ -80,6 +92,8 @@ const cli: CliArgs = {
   model: "",
   url: "",
   api: "",
+  host: "127.0.0.1",
+  cliKey: "456789",
 };
 
 const opts = program.opts() as {
@@ -93,6 +107,8 @@ const opts = program.opts() as {
   activeProvider: string;
   url: string;
   api: string;
+  host: string;
+  cliKey: string;
 };
 
 process.env.DEBUG ??= "useclaudeproxy:*";
@@ -104,5 +120,7 @@ cli.renew = opts.renew;
 cli.activeProvider = opts.provider;
 cli.url = opts.url ?? "";
 cli.api = opts.api ?? "";
+cli.host = opts.host;
+cli.cliKey = opts.cliKey;
 
 export const args = cli;

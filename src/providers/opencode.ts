@@ -55,8 +55,8 @@ export class OpenCodeProvider extends BaseProvider {
   async initConfig(): Promise<void> {
     const config = readConfig();
 
-    config["host"] = "127.0.0.1";
-    config["api-keys"] = ["456789"];
+    config["host"] = args.host;
+    config["api-keys"] = [args.cliKey];
     config["openai-compatibility"] = [{ name: this.name }];
 
     const api = config["openai-compatibility"][0];
