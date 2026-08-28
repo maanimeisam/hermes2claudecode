@@ -71,6 +71,21 @@ useclaudeproxy --model stealth/ox-alpha
 useclaudeproxy --proxy http://127.0.0.1:2080 --model stealth/ox-alpha
 ```
 
+### Providers
+
+Two providers are built in. Both expose the same local proxy endpoint — they
+differ only in how they authenticate upstream.
+
+- **`hermes`** (default) — Nous Research OAuth 2.0 device flow. Completes a
+  browser login, then auto-refreshes the token.
+- **`opencode`** — authenticates against `https://opencode.ai/zen/v1` with a key
+  (no device flow). Tokens persist in `data/opencode-tokens.json`.
+
+```bash
+# Use the opencode provider, routing its upstream traffic through a proxy:
+useclaudeproxy --proxy http://127.0.0.1:2080 --provider opencode --model hy3-free
+```
+
 On success the CLI prints the env vars to point Claude Code at the local proxy:
 
 ```bash
@@ -86,7 +101,7 @@ These work in **any position** — before or after the command.
 | Flag                | Default            | Notes                                                         |
 | ------------------- | ------------------ | ------------------------------------------------------------- |
 | `--model <model>`   | _(required)_       | Model name to expose in OpenAI compatibility.                 |
-| `--provider <name>` | `hermes`           | OAuth provider to use (hermes only, for now).                 |
+| `--provider <name>` | `hermes`           | OAuth provider to use (`hermes` \| `opencode`).               |
 | `--node-env <env>`  | `development`      | `development` \| `production`.                                |
 | `--debug <ns>`      | `useclaudeproxy:*` | `debug` namespaces, e.g. `useclaudeproxy:oauth`.              |
 | `--data-dir <dir>`  | `data`             | Token storage directory.                                      |
@@ -111,8 +126,9 @@ useclaudeproxy --model stealth/ox-alpha --data-dir ~/.useclaudeproxy --debug use
 - Two independent "proxy" concepts: the TS app's OAuth calls can use an outbound
   proxy (`--proxy`), and the binary has its own separate `proxy-url` for upstream
   provider traffic. They do not affect each other.
-- Providers are pluggable. `hermes` is registered in `src/providers/index.ts`;
-  add another by implementing the `Provider` interface in `src/providers/types.ts`.
+- Providers are pluggable. `hermes` and `opencode` are registered in
+  `src/providers/index.ts`; add another by implementing `BaseProvider` in
+  `src/providers/`.
 
 ## License
 
