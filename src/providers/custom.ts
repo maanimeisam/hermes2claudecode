@@ -80,7 +80,7 @@ export class CustomProvider extends BaseProvider {
             model: args.model,
             messages: [{ role: "user", content: "ping" }],
             stream: false,
-            max_tokens: 1,
+            max_tokens: 10,
           },
           throwHttpErrors: false,
           retry: { limit: 0 },
