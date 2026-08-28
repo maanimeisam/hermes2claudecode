@@ -42,8 +42,6 @@ invocation starts from wherever you ran it, so to reuse your saved login next
 time, run it from the **same directory** every time. To keep data elsewhere,
 pass `--data-dir`.
 
-
-
 Tokens are persisted inside the provider's own file — Hermes uses
 `data/hermes-tokens.json` (mode `0o600`). The token path is **provider-specific**,
 not a shared global: a future provider can use a completely different location or
@@ -108,25 +106,24 @@ export ANTHROPIC_AUTH_TOKEN=456789
 
 These work in **any position** — before or after the command.
 
-| Flag                | Default            | Notes                                                         |
-| ------------------- | ------------------ | ------------------------------------------------------------- |
-| `--model <model>`   | _(required)_       | Model name to expose in OpenAI compatibility.                 |
-| `--provider <name>` | `hermes`           | OAuth provider to use (`hermes` \| `opencode` \| `custom`).  |
-| `--url <url>`       | `""`               | OpenAI-compatible API base URL (required when `custom`).      |
-| `--api <key>`       | `""`               | API key for the custom API (required when `custom`).          |
-| `--node-env <env>`  | `development`      | `development` \| `production`.                                |
-| `--debug <ns>`      | `useclaudeproxy:*` | `debug` namespaces, e.g. `useclaudeproxy:oauth`.              |
-| `--data-dir <dir>`  | `data`             | Token storage directory.                                      |
-| `--proxy <url>`     | `""`               | CLIProxyAPI outbound proxy (`""`\|`direct`\|`none` to clear). |
-| `--force`           | `false`            | Re-download the binary even if already installed.             |
-| `--renew`           | `false`            | Re-extract from the kept archive and re-run the device flow.  |
+| Flag                | Default      | Notes                                                         |
+| ------------------- | ------------ | ------------------------------------------------------------- |
+| `--model <model>`   | _(required)_ | Model name to expose in OpenAI compatibility.                 |
+| `--provider <name>` | `hermes`     | OAuth provider to use (`hermes` \| `opencode` \| `custom`).   |
+| `--url <url>`       | `""`         | OpenAI-compatible API base URL (required when `custom`).      |
+| `--api <key>`       | `""`         | API key for the custom API (required when `custom`).          |
+| `--data-dir <dir>`  | `data`       | Token storage directory.                                      |
+| `--proxy <url>`     | `""`         | CLIProxyAPI outbound proxy (`""`\|`direct`\|`none` to clear). |
+| `--force`           | `false`      | Re-download the binary even if already installed.             |
+| `--renew`           | `false`      | Re-extract from the kept archive and re-run the device flow.  |
 
-Example with position-independent flags:
+### Renew
+
+`--renew` re-extracts the binary from the kept archive and forces a fresh
+device-flow login (ignores any stored token):
 
 ```bash
-useclaudeproxy --data-dir ~/.useclaudeproxy --debug useclaudeproxy:oauth --model stealth/ox-alpha
-# is equivalent to
-useclaudeproxy --model stealth/ox-alpha --data-dir ~/.useclaudeproxy --debug useclaudeproxy:oauth
+useclaudeproxy --renew
 ```
 
 ## Notes
