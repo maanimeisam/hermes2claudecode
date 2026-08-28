@@ -12,6 +12,8 @@ interface CliArgs {
   token?: string;
   proxyUrl?: string;
   model: string;
+  url: string;
+  api: string;
 }
 
 const program = new Command();
@@ -30,6 +32,11 @@ program
     "OAuth provider to use (default: hermes)",
     "hermes",
   )
+  .option("--url <url>", "OpenAI-compatible API base URL (provider: custom)")
+  .option(
+    "--api <key>",
+    "API key for the OpenAI-compatible API (provider: custom)",
+  )
   .option("--force", "re-download CLIProxyAPI even if already installed")
   .option("--renew", "re-extract from the kept archive and re-run device flow")
   .parse();
@@ -39,6 +46,17 @@ if (
   !program.opts().model
 ) {
   program.error("required option '--model <model>' not specified");
+}
+
+if (program.opts().provider === "custom") {
+  const o = program.opts<{ url?: string; api?: string; model?: string }>();
+  const missing: string[] = [];
+  if (!o.url) missing.push("--url <url>");
+  if (!o.api) missing.push("--api <key>");
+  if (!o.model) missing.push("--model <model>");
+  if (missing.length) {
+    program.error(`provider 'custom' requires: ${missing.join(", ")}`);
+  }
 }
 
 program.addHelpText(
@@ -60,6 +78,8 @@ const cli: CliArgs = {
   renew: false,
   activeProvider: "hermes",
   model: "",
+  url: "",
+  api: "",
 };
 
 const opts = program.opts() as {
@@ -71,6 +91,8 @@ const opts = program.opts() as {
   model: string;
   provider: string;
   activeProvider: string;
+  url: string;
+  api: string;
 };
 
 process.env.DEBUG ??= "useclaudeproxy:*";
@@ -80,5 +102,7 @@ cli.model = opts.model;
 cli.force = opts.force;
 cli.renew = opts.renew;
 cli.activeProvider = opts.provider;
+cli.url = opts.url ?? "";
+cli.api = opts.api ?? "";
 
 export const args = cli;
