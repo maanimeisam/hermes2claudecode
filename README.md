@@ -118,6 +118,7 @@ These work in **any position** — before or after the command.
 | `--url <url>`       | `""`         | OpenAI-compatible API base URL (required when `custom`).      |
 | `--api <key>`       | `""`         | API key for the custom API (required when `custom`).          |
 | `--data-dir <dir>`  | `data`       | Token storage directory.                                      |
+| `--tools-dir <dir>` | `tools`      | Directory for the binary, `config.yaml`, and archive.         |
 | `--proxy <url>`     | `""`         | CLIProxyAPI outbound proxy (`""`\|`direct`\|`none` to clear). |
 | `--host <host>`     | `127.0.0.1`  | Host to bind in `tools/config.yaml`.                          |
 | `--cli-key <key>`   | `456789`     | API key to register in config `api-keys`.                     |

@@ -6,11 +6,8 @@ import { CONFIG_PATH, setProxyUrl } from "./config-yaml.ts";
 
 const log = Debug("app:run");
 
-const BINARY = path.join(import.meta.dirname, "..", "tools", "cli-proxy-api");
+const BINARY = path.join(args.toolsDir, "cli-proxy-api");
 
-// Spawns the extracted binary with tools/config.yaml. `proxyArgs` are passed
-// through verbatim (e.g. --tui, --standalone). Inherits stdio and forwards
-// signals so the user drives it directly (Ctrl+C shuts the server down).
 export async function runCliProxy(proxyArgs: string[] = []): Promise<number> {
   setProxyUrl(args.proxy);
 

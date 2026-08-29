@@ -1,10 +1,10 @@
 import { Command } from "commander";
-
-export const PROVIDERS = ["claude", "gemini", "codex"];
+import path from "node:path";
 
 interface CliArgs {
   force: boolean;
   dataDir: string;
+  toolsDir: string;
   proxy: string;
   renew: boolean;
   activeProvider: string;
@@ -25,6 +25,11 @@ program
   .name("useclaudeproxy")
   .description("Hermes OAuth Device Flow")
   .option("--data-dir <dir>", "token storage directory", "data")
+  .option(
+    "--tools-dir <dir>",
+    "directory for the CLIProxyAPI binary and config",
+    path.join(import.meta.dirname, "..", "tools"),
+  )
   .option("--model <model>", "model name to expose in openai-compatibility")
   .option(
     "--proxy <url>",
@@ -88,6 +93,7 @@ Environment variables:
 const cli: CliArgs = {
   force: false,
   dataDir: "data",
+  toolsDir: path.join(import.meta.dirname, "..", "tools"),
   proxy: "",
   renew: false,
   activeProvider: "hermes",
@@ -101,6 +107,7 @@ const cli: CliArgs = {
 
 const opts = program.opts() as {
   dataDir: string;
+  toolsDir: string;
   proxy: string;
   force: boolean;
   renew: boolean;
@@ -117,6 +124,7 @@ const opts = program.opts() as {
 
 process.env.DEBUG ??= "useclaudeproxy:*";
 cli.dataDir = opts.dataDir;
+cli.toolsDir = opts.toolsDir;
 cli.proxy = opts.proxy ?? "";
 cli.model = opts.model;
 cli.force = opts.force;

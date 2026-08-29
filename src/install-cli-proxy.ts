@@ -12,9 +12,9 @@ import { getProvider } from "./providers/index.ts";
 
 const log = Debug("app:install");
 
-const VERSION = "7.2.144";
+const VERSION = "7.2.145";
 const RELEASE_BASE = `https://github.com/router-for-me/CLIProxyAPI/releases/download/v${VERSION}`;
-const TOOLS_DIR = path.join(import.meta.dirname, "..", "tools");
+const TOOLS_DIR = args.toolsDir;
 
 function pickAsset(): string {
   const p = os.platform();

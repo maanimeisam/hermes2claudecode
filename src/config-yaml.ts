@@ -1,14 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import { args } from "./args.ts";
 
 let cache: Record<string, any> | undefined;
-export const CONFIG_PATH = path.join(
-  import.meta.dirname,
-  "..",
-  "tools",
-  "config.yaml",
-);
+export const CONFIG_PATH = path.join(args.toolsDir, "config.yaml");
 
 export function readConfig(
   filePath: string = CONFIG_PATH,
