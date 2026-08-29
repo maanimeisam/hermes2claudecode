@@ -78,6 +78,8 @@ differ only in how they authenticate upstream.
   browser login, then auto-refreshes the token.
 - **`opencode`** — authenticates against `https://opencode.ai/zen/v1` with a key
   (no device flow). Tokens persist in `data/opencode-tokens.json`.
+- **`cline`** — Cline (cline.bot) WorkOS device flow. Completes a browser login,
+  then auto-refreshes the token. Tokens persist in `data/cline-tokens.json`.
 - **`custom`** — point the proxy at any OpenAI-compatible API. No login: supply
   `--url`, `--api`, and `--model`; the given key is sent as a `Bearer` header
   upstream. Token persists in `data/custom-tokens.json`.
@@ -92,6 +94,9 @@ useclaudeproxy --provider custom \
   --url http://1.1.1.1:20128/v1 \
   --api sk-123123123 \
   --model XX
+
+# Use the cline provider (WorkOS device flow):
+useclaudeproxy --provider cline --model deepseek/deepseek-v4-flash
 ```
 
 On success the CLI prints the env vars to point Claude Code at the local proxy:
@@ -109,7 +114,7 @@ These work in **any position** — before or after the command.
 | Flag                | Default      | Notes                                                         |
 | ------------------- | ------------ | ------------------------------------------------------------- |
 | `--model <model>`   | _(required)_ | Model name to expose in OpenAI compatibility.                 |
-| `--provider <name>` | `hermes`     | OAuth provider to use (`hermes` \| `opencode` \| `custom`).   |
+| `--provider <name>` | `hermes`     | OAuth provider to use (`hermes` \| `opencode` \| `cline` \| `custom`). |
 | `--url <url>`       | `""`         | OpenAI-compatible API base URL (required when `custom`).      |
 | `--api <key>`       | `""`         | API key for the custom API (required when `custom`).          |
 | `--data-dir <dir>`  | `data`       | Token storage directory.                                      |
@@ -138,9 +143,9 @@ useclaudeproxy --renew
 - Two independent "proxy" concepts: the TS app's OAuth calls can use an outbound
   proxy (`--proxy`), and the binary has its own separate `proxy-url` for upstream
   provider traffic. They do not affect each other.
-- Providers are pluggable. `hermes` and `opencode` are registered in
-  `src/providers/index.ts`; add another by implementing `BaseProvider` in
-  `src/providers/`.
+- Providers are pluggable. `hermes`, `opencode`, `cline`, and `custom` are
+  registered in `src/providers/index.ts`; add another by implementing
+  `BaseProvider` in `src/providers/`.
 
 ## License
 
