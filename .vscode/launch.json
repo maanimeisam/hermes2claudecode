@@ -57,6 +57,26 @@
       "stopOnEntry": false
     },
     {
+      "name": "app-cline",
+      "type": "node",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev:once",
+        "--proxy",
+        "http://127.0.0.1:8585",
+        "--provider",
+        "cline",
+        "--model",
+        "deepseek/deepseek-v4-flash"
+      ],
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "stopOnEntry": false
+    },
+    {
       "name": "File(tsx)",
       "type": "node",
       "request": "launch",

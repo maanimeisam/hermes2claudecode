@@ -15,7 +15,7 @@ export async function app(): Promise<void> {
 
   if (args.renew) process.exit(0);
 
-  provider.initConfig();
+  await provider.initConfig();
 
   provider.logConfigInfo();
 

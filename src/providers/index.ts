@@ -2,10 +2,12 @@ import type { BaseProvider } from "./base-provider.ts";
 import { hermesProvider } from "./hermes.ts";
 import { openCodeProvider } from "./opencode.ts";
 import { customProvider } from "./custom.ts";
+import { clineProvider } from "./cline.ts";
 
 const registry = new Map<string, BaseProvider>([
   ["hermes", hermesProvider],
   ["opencode", openCodeProvider],
+  ["cline", clineProvider],
   ["custom", customProvider],
 ]);
 
