@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-package `useclaudeproxy` is a TypeScript CLI that authenticates the **Hermes CLI** against Nous Research's OAuth 2.0 Device Authorization Grant (`https://portal.nousresearch.com/api/oauth`). It then downloads, configures, and runs the third-party `CLIProxyAPI` binary (`tools/cli-proxy-api`) — a local OpenAI/Gemini/Claude/Codex-compatible proxy — wired with the provider tokens it obtained.
+package `useclaudeproxy` is a TypeScript CLI that authenticates against an upstream **provider** (Nous Research Hermes OAuth device flow, OpenCode, Cline WorkOS device flow, or any OpenAI-compatible API), then downloads, configures, and runs the third-party `CLIProxyAPI` binary — a local OpenAI/Gemini/Claude/Codex-compatible proxy — wired with the obtained token.
 
-The two halves are distinct:
+Two distinct halves:
 
-- **The TS app** (`src/`) handles OAuth, config editing, and lifecycle of the binary.
-- **The binary** (`tools/cli-proxy-api`, ~600KB ELF, fetched from GitHub releases) is the actual proxy. It is not part of the TS build.
+- **The TS app** (`src/`) handles provider auth, config writing, and lifecycle of the binary.
+- **The binary** (`tools/cli-proxy-api`, fetched from GitHub releases) is the actual proxy. It is not part of the TS build; the TS app only downloads/extracts/spawns it.
 
 ## Commands
 
@@ -25,43 +25,69 @@ pnpm lint       # biome lint --write
 pnpm format     # biome format --write
 ```
 
-Biome 2.5.2 (config: `biome.json`) is the formatter + linter; a husky pre-commit hook runs `biome check` on staged files via lint-staged. There is **no test setup** in this repo (no test runner dependency; `tsconfig` references a `tests/` dir that does not exist).
+Biome is the formatter + linter; a husky pre-commit hook runs `biome check` on staged files via lint-staged. There is **no test setup** in this repo.
 
-The app is invoked through three subcommands plus a no-command default:
+## Running
 
-- `useclaudeproxy` (no command) → run the OAuth device flow, validate/refresh the stored token, print account info, optionally `--watch`.
-- `useclaudeproxy run [-- ...args]` → ensure the binary is present, then spawn it with `tools/config.yaml` (passes extra args through verbatim, e.g. `--tui`).
-- `useclaudeproxy set-token <claude|gemini|codex> <token>` → upsert a `<provider>-api-key` in `tools/config.yaml`.
-- `useclaudeproxy set-proxy <url|""|direct|none>` → set the binary's global `proxy-url`.
+There is one flow, not subcommands — the CLI is a single invocation:
 
-Inline overrides work as position-independent global flags (e.g. `useclaudeproxy --node-env production --debug app:*`).
+```bash
+pnpm dev -- --model stealth/ox-alpha                     # hermes (default provider)
+pnpm dev -- --provider cline --model deepseek/...        # cline WorkOS device flow
+pnpm dev -- --provider custom --url ... --api ... --model ...
+useclaudeproxy --renew --model ...                       # re-extract binary + fresh login
+```
+
+`--model` is the only required flag. All flags are position-independent (parsed straight off argv by `src/args.ts`, not by commander's subcommand parsing). See README.md for the full flag table.
+
+On success the app prints env vars (`ANTHROPIC_MODEL`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) to point Claude Code at the local proxy, then spawns the binary and enters a per-provider token watcher loop.
 
 ## Architecture
 
-Entry point is `src/index.ts`; it routes on `args.command` and calls one of the paths below. Read these files in order to understand the flow:
+Entry point is `src/index.ts`; the flow is linear and orchestrated in `src/app.ts`:
 
-- **`src/args.ts`** — commander parser. Parses position-independent global flags (node-env, debug, data-dir, proxy-\*) straight from raw argv (before handing the rest to commander), then exports the resolved `args` object plus `PROVIDERS = ["claude","gemini","codex"]`. Flags work in both `useclaudeproxy --force` and `useclaudeproxy run --force` because they're read from argv, not commander.
-- **`src/config.ts`** — zod-validated config sourced from the parsed CLI args. On import it validates against `envSchema` (with defaults) and **creates `DATA_DIR`**. The app's own config is NODE*ENV, DEBUG, DATA_DIR, PROXY*\* — all supplied via flags, no `.env` files.
-- **`src/types.ts`** — shared types and the three error classes used across the flow: `OAuthHttpError` (status + body), `DeviceCodeExpiredError`, `AccessDeniedError`.
-- **`src/http-client.ts`** — `createOAuthHttpClient()` builds a `got` instance for the OAuth provider. This module knows nothing about OAuth; it only configures retries/proxy and returns the client.
-- **`src/device-flow-client.ts`** — `DeviceFlowClient` class, one public method per flow step (`requestDeviceCode`, `pollForToken`, `refreshToken`, `fetchAccountInfo`) over the `got` client. `handlePollingError` distinguishes terminal errors (`expired_token` → `DeviceCodeExpiredError`, `access_denied` → `AccessDeniedError`) from transient ones (`authorization_pending`, `slow_down`) that just continue polling.
-- **`src/config-yaml.ts`** — surgical read/write of the **live** `tools/config.yaml` using `yaml`'s `parseDocument` so comments/formatting are preserved (only the changed key moves). `CONFIG_PATH` is `tools/config.yaml`. `setProviderApiKey` upserts into the `<provider>-api-key` sequence; `setProxyUrl` validates the URL scheme (`socks5|http|https`) or `direct`/`none`/empty to clear.
-- **`src/install-cli-proxy.ts`** — `ensureCliProxy()` downloads the pinned `CLIProxyAPI` release (`VERSION = "7.2.140"`) from GitHub for the current platform/arch, extracts via `tar`, and skips if `tools/` is non-empty unless `--force`.
-- **`src/run-cli-proxy.ts`** — `runCliProxy()` spawns the binary with `-config tools/config.yaml`, inherits stdio, and forwards SIGINT/SIGTERM so the user can drive it directly.
-- **`src/app.ts`** — orchestration. `app()`: `ensureCliProxy()` → `getValidToken()` (use stored token if `fetchAccountInfo` succeeds, else refresh, else run device flow) → print account info → optionally a 6s `--watch` loop that re-validates/renews the token. Tokens persist at `DATA_DIR/tokens.json` with `mode 0o600`.
+1. `getProvider(args.activeProvider)` — provider registry (`src/providers/index.ts`) resolves `hermes` | `opencode` | `cline` | `custom` to a `BaseProvider` instance.
+2. `ensureCliProxy()` (`src/install-cli-proxy.ts`) — downloads the pinned CLIProxyAPI release (`VERSION` constant) from GitHub for the current platform/arch, extracts via `tar`, seeds `tools/config.yaml` from `config.example.yaml` if absent. Skips if `tools/` is non-empty unless `--force`. `--renew` instead wipes `tools/` (keeping only the downloaded archive), re-extracts, and clears the stored token.
+3. `provider.initConfig()` — provider-specific: builds the `openai-compatibility` block in `tools/config.yaml` (host, port, api-keys, base-url, models with `claude-opus-5` alias, custom headers) and obtains/refreshes the token.
+4. `provider.logConfigInfo()` — prints the endpoint and Claude Code env vars.
+5. `runCliProxy()` (`src/run-cli-proxy.ts`) — spawns the binary with `-config tools/config.yaml`, inherits stdio, forwards SIGINT/SIGTERM.
+6. `provider.startTokenWatcher(signal)` — loop that refreshes the token on an interval and re-injects it into `tools/config.yaml`; aborted on SIGINT/SIGTERM.
 
-### Two separate proxy concepts (easy to conflate)
+Read these files in order to understand the flow:
 
-- `config.ts` `PROXY_*` / `createOAuthHttpClient()` — the outbound proxy used by **the TS app's OAuth calls** to `portal.nousresearch.com`.
-- `config-yaml.ts` `proxy-url` in `tools/config.yaml` — the outbound proxy used by the **`CLIProxyAPI` binary** for its upstream provider traffic.
+- **`src/args.ts`** — commander parser. Exports the resolved `args` object: `--model` (required), `--provider` (default `hermes`), `--url`/`--api` (required when provider is `custom`), `--data-dir`, `--tools-dir` (default `<repo>/tools`), `--proxy`, `--host`, `--port`, `--cli-key`, `--force`, `--renew`. Validations (missing `--model`, custom-provider requirements) run right after `program.parse()`.
+- **`src/config.ts`** — zod-validated config sourced from the parsed args + env. On import it validates and **creates `DATA_DIR`**. App config is just NODE_ENV/DEBUG/DATA_DIR — no `.env` files.
+- **`src/types.ts` / `src/utils.ts`** — `AccessDeniedError`, `AccountInfo`, and an abort-signal-aware `sleep`.
+- **`src/http-client.ts`** — `createOAuthHttpClient()` builds a `got` instance (retry off, proxy agents when `--proxy` is set). Knows nothing about OAuth.
+- **`src/config-yaml.ts`** — read/write of the live `tools/config.yaml` with a module-level cache (`readConfig`/`writeConfig`), plus `setProxyUrl` validation (`socks5|http|https` scheme, or `direct`/`none`/empty to clear).
+- **`src/install-cli-proxy.ts`** / **`src/run-cli-proxy.ts`** — binary install/lifecycle described above.
 
-These are independent. Editing one does not affect the other.
+### Provider system
 
-### Import convention
+All auth logic lives in `src/providers/`, one file per provider, registered in `src/providers/index.ts` (a `Map` of name → instance; `getProvider` throws on unknown names). To add a provider: subclass `BaseProvider` (`base-provider.ts`) and implement:
 
-`tsconfig.json` uses `allowImportingTsExtensions` + `rewriteRelativeImportExtensions`, so source imports use `.ts` extensions (e.g. `./args.ts`) and `tsc` rewrites them to `.js` on build. Keep this pattern in new files — do not switch to extensionless imports.
+- `name`, `baseUrl`, `tokenPath` (provider-specific token file under `DATA_DIR`, e.g. `data/hermes-tokens.json`, mode `0o600` — paths are deliberately per-provider, not shared)
+- `initConfig()` — write the provider's `openai-compatibility` block into the proxy config
+- `getValidToken()` — use stored token, refresh if needed, else run the provider's login flow
+- `startTokenWatcher(signal)` — periodic refresh loop; `sleep()` from `utils.ts` handles abort
+
+`BaseProvider` supplies `readStoredToken`/`saveTokens`/`clearStoredToken`/`logConfigInfo`. Note `clearStoredToken` currently removes the whole `DATA_DIR` — providers that share a data dir are affected.
+
+Each provider is self-contained by design: `hermes.ts` and `cline.ts` each carry their own copy of the device-flow client and error classes (they target different OAuth servers), while `opencode.ts` and `custom.ts` are simple key-based providers. Adding a provider that duplicates existing flow logic is acceptable here — the files are meant to be independent.
+
+## Working rules (user preferences)
+
+- Re-index this project with the codebase-memory MCP (`index_repository`) at each step; use it as the primary source of truth for understanding the project.
+- Never create, update, run, or verify tests. Skip and exclude any files containing "test" in their names (e.g. `index_test.ts`).
+- Never use web drivers (Puppeteer, etc.) or any sandbox. Verify syntax only with `pnpm type-check` (`tsc --noEmit`).
+- Use the `debug` package to log each step's results (follow the existing `Debug("useclaudeproxy:<module>")` pattern).
+- Source code only: do not write comments, READMEs, bash scripts, tests, bundler config, package.json, tsconfig, etc. — the user maintains all of those. Deliver clean code and nothing else.
+
+## Import convention
+
+`tsconfig.json` uses `allowImportingTsExtensions` + `rewriteRelativeImportExtensions`, so source imports use `.ts` extensions (e.g. `./args.ts`) and `tsc` rewrites them to `.js` on build. Keep this pattern in new files — do not switch to extensionless imports. (Note: a few existing files import `./config.js` — prefer `.ts`.)
 
 ## Config files you will touch
 
-- App config (NODE*ENV, DEBUG, DATA_DIR, PROXY*_) is now supplied via position-independent global flags — `--node-env`, `--debug`, `--data-dir`, `--proxy-enabled`, `--proxy-host`, `--proxy-port`. `DEBUG="app:_"`enables all`debug`namespaces. No`.env` files.
-- `tools/config.yaml` — the `CLIProxyAPI` config (api-keys, routes, proxy-url, management, plugins). Edited at runtime by `config-yaml.ts`; the example is `tools/config.example.yaml`. Full provider key blocks are commented out by default.
+- `tools/config.yaml` — the CLIProxyAPI config (host, port, api-keys, openai-compatibility, proxy-url). Written at runtime by `config-yaml.ts` and every provider's `initConfig()`; template is `tools/config.example.yaml`. It is gitignored-ish state: the archive + binary also live in `tools/`.
+- `data/*-tokens.json` — per-provider token storage (mode `0o600`), created at runtime.
