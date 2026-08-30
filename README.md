@@ -1,8 +1,9 @@
 # useclaudeproxy
 
-A TypeScript CLI (`useclaudeproxy`) that authenticates the **Hermes CLI** against
-[Nous Research](https://nousresearch.com) via OAuth 2.0 Device Authorization
-Grant, then downloads, configures, and runs
+A TypeScript CLI (`useclaudeproxy`) that authenticates against a configurable
+upstream **provider** — [Nous Research](https://nousresearch.com)'s Hermes CLI
+via OAuth 2.0 Device Authorization Grant, OpenCode, Cline (WorkOS device flow),
+or any OpenAI-compatible API — then downloads, configures, and runs
 [`CLIProxyAPI`](https://github.com/router-for-me/CLIProxyAPI) — a local
 OpenAI / Gemini / Claude / Codex compatible proxy — wired with the token it
 just obtained.
@@ -71,7 +72,7 @@ useclaudeproxy --proxy http://127.0.0.1:2080 --model stealth/ox-alpha
 
 ### Providers
 
-Two providers are built in. Both expose the same local proxy endpoint — they
+Four providers are built in. All expose the same local proxy endpoint — they
 differ only in how they authenticate upstream.
 
 - **`hermes`** (default) — Nous Research OAuth 2.0 device flow. Completes a
@@ -141,9 +142,8 @@ useclaudeproxy --renew
   the third-party `cli-proxy-api` binary fetched from the
   [CLIProxyAPI releases](https://github.com/router-for-me/CLIProxyAPI/releases)
   — it is not part of the TS build.
-- Two independent "proxy" concepts: the TS app's OAuth calls can use an outbound
-  proxy (`--proxy`), and the binary has its own separate `proxy-url` for upstream
-  provider traffic. They do not affect each other.
+- One `--proxy` flag wires two places: the TS app's own HTTP calls to the
+  provider, and the binary's `proxy-url` for upstream provider traffic.
 - Providers are pluggable. `hermes`, `opencode`, `cline`, and `custom` are
   registered in `src/providers/index.ts`; add another by implementing
   `BaseProvider` in `src/providers/`.
