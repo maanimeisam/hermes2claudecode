@@ -12,7 +12,7 @@ import { getProvider } from "./providers/index.ts";
 
 const log = Debug("app:install");
 
-const VERSION = "7.2.145";
+const VERSION = "7.2.147";
 const RELEASE_BASE = `https://github.com/router-for-me/CLIProxyAPI/releases/download/v${VERSION}`;
 const TOOLS_DIR = args.toolsDir;
 
